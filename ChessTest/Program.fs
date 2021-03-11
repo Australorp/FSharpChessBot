@@ -14,7 +14,7 @@ type Side =
     | White
     | Black
 
-type Piece(pieceColor, typeOfPiece: PieceTypes, coord: (int * int)) =
+type Piece(pieceColor:Side, typeOfPiece: PieceTypes, coord: (int * int)) =
     member _.Color = pieceColor
     member _.PieceType = typeOfPiece
     member _.Coord = coord
@@ -32,18 +32,18 @@ let TestingFEN = "2b1kQ1r/pp1Nbppp/2n2n2/2q1p1P1/NB1PP3/8/PPP2P1P/RrB1K2R w KQk 
 
 let MatchPiece x (coord:(int * int)) =
     match x with
-    | "R" -> Some("W", Rook, coord)
-    | "N" -> Some("W", Knight, coord)
-    | "B" -> Some("W", Bishop, coord)
-    | "Q" -> Some("W", Queen, coord)
-    | "K" -> Some("W", King, coord)
-    | "P" -> Some("W", Pawn, coord)
-    | "r" -> Some("B", Rook, coord)
-    | "n" -> Some("B", Knight, coord)
-    | "b" -> Some("B", Bishop, coord)
-    | "q" -> Some("B", Queen, coord)
-    | "k" -> Some("B", King, coord)
-    | "p" -> Some("B", Pawn, coord)
+    | "R" -> Some(White, Rook, coord)
+    | "N" -> Some(White, Knight, coord)
+    | "B" -> Some(White, Bishop, coord)
+    | "Q" -> Some(White, Queen, coord)
+    | "K" -> Some(White, King, coord)
+    | "P" -> Some(White, Pawn, coord)
+    | "r" -> Some(Black, Rook, coord)
+    | "n" -> Some(Black, Knight, coord)
+    | "b" -> Some(Black, Bishop, coord)
+    | "q" -> Some(Black, Queen, coord)
+    | "k" -> Some(Black, King, coord)
+    | "p" -> Some(Black, Pawn, coord)
     | _ -> None
 
 let ComputeFEN (boardState:Board) = 
@@ -63,7 +63,7 @@ let ComputeFEN (boardState:Board) =
                         runningTotal <- 0
 
                     match boardState.Pieces.[p].Color with
-                    | "W" -> 
+                    | White -> 
                         match boardState.Pieces.[p].PieceType with
                         | Rook -> testString <- testString + "R"
                         | Knight -> testString <- testString + "N"
@@ -71,7 +71,7 @@ let ComputeFEN (boardState:Board) =
                         | Queen -> testString <- testString + "Q"
                         | King -> testString <- testString + "K"
                         | Pawn -> testString <- testString + "P" 
-                    | "B" ->
+                    | Black ->
                         match boardState.Pieces.[p].PieceType with
                         | Rook -> testString <- testString + "r"
                         | Knight -> testString <- testString + "n"
@@ -93,8 +93,6 @@ let ComputeFEN (boardState:Board) =
     testString <- testString + " w KQkq - 0 1"
     testString
 
-    
-
 let ReadFEN (x:string) =
     let strings = x.Split('/', ' ')
     let AllPieces:List<Piece> = [
@@ -109,6 +107,7 @@ let ReadFEN (x:string) =
                     let num = c.[x].ToString() |> Int32.Parse
                     xcount <- num + xcount
                 else
+                    //let test = MatchPiece (c.[x].ToString()) (xcount + 1, ycount) |> Option.map Piece
                     let test = MatchPiece (c.[x].ToString()) (xcount + 1, ycount) |> Option.map Piece
                     match test with
                     | Some(x) -> x
@@ -118,6 +117,30 @@ let ReadFEN (x:string) =
         ycount <- ycount + 1
     ]
     AllPieces
+
+let CalculateMaterialBalance (boardState:Board) = 
+    let materialBalance = [
+    for p in 0 .. boardState.Pieces.Length - 1 do
+        match boardState.Pieces.[p].Color with
+        | White ->
+            match boardState.Pieces.[p].PieceType with
+            | Rook -> 5
+            | Knight -> 3
+            | Bishop -> 3
+            | Queen -> 9
+            | King -> 0
+            | Pawn -> 1
+            
+        | Black ->
+            match boardState.Pieces.[p].PieceType with
+            | Rook -> -5
+            | Knight -> -3
+            | Bishop -> -3
+            | Queen -> -9
+            | King -> 0
+            | Pawn -> -1
+    ]
+    materialBalance |> List.sum
 
 let mutable GameBoard = Board((ReadFEN StartingFEN), White)
 
@@ -532,7 +555,7 @@ let CheckForPawnMoves (piece:Piece) =
         let mutable xsearch = fst piece.Coord
         let mutable ysearch = snd piece.Coord
         match piece.Color with
-        | "W" ->   
+        | White ->   
             if snd piece.Coord = 2
                 then 
                     if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch + 2)
@@ -543,7 +566,7 @@ let CheckForPawnMoves (piece:Piece) =
                 then ()
                 else
                     (xsearch, ysearch + 1)
-        | "B" ->
+        | Black ->
             if snd piece.Coord = 7
                 then 
                     if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch - 2)
@@ -564,7 +587,7 @@ let CheckForPawnCaptures (piece:Piece) =
         let mutable ysearch = snd piece.Coord
         match it with
         | 0 ->
-                if piece.Color = "W"
+                if piece.Color = White
                     then ysearch <- ysearch + 1
                     else ysearch <- ysearch - 1
                 xsearch <- xsearch + 1
@@ -576,7 +599,7 @@ let CheckForPawnCaptures (piece:Piece) =
                                     if piece.Color <> GameBoard.Pieces.[q].Color
                                         then GameBoard.Pieces.[q]
         | 1 ->
-                if piece.Color = "W"
+                if piece.Color = Black
                     then ysearch <- ysearch + 1
                     else ysearch <- ysearch - 1
                 xsearch <- xsearch - 1
@@ -616,7 +639,7 @@ let GetAllPossibleMoves (boardState:Board) =
     | White ->
         let WhitePieces = [
         for i in 0 .. boardState.Pieces.Length - 1 do
-            if boardState.Pieces.[i].Color = "W"
+            if boardState.Pieces.[i].Color = White
                 then boardState.Pieces.[i]
         ]
 
@@ -629,7 +652,7 @@ let GetAllPossibleMoves (boardState:Board) =
     | Black ->
         let BlackPieces = [
             for i in 0 .. boardState.Pieces.Length - 1 do
-                if boardState.Pieces.[i].Color = "W"
+                if boardState.Pieces.[i].Color = Black
                     then boardState.Pieces.[i]
             ]
 
@@ -645,7 +668,7 @@ let GetAllPossibleCaptures (boardState:Board) =
     | White ->
         let WhitePieces = [
         for i in 0 .. boardState.Pieces.Length - 1 do
-            if boardState.Pieces.[i].Color = "W"
+            if boardState.Pieces.[i].Color = White
                 then boardState.Pieces.[i]
         ]
 
@@ -658,7 +681,7 @@ let GetAllPossibleCaptures (boardState:Board) =
     | Black ->
         let BlackPieces = [
             for i in 0 .. boardState.Pieces.Length - 1 do
-                if boardState.Pieces.[i].Color = "W"
+                if boardState.Pieces.[i].Color = Black
                     then boardState.Pieces.[i]
             ]
 
@@ -677,27 +700,31 @@ let GetAllPossibleCaptures (boardState:Board) =
 
 
 let MakeMove (piece:Piece) (square:(int * int)) = 
-    let mutable OpenMove = true
-    for q in 0 .. GameBoard.Pieces.Length - 2 do
-        if GameBoard.Pieces.[q].Coord = square
+    let returnBoard = (
+        if GameBoard.Pieces |> List.map (fun x -> x.Coord) |> List.contains square
             then
-                OpenMove <- false
-                if GameBoard.Pieces.[q] <> piece && GameBoard.Pieces.[q].Color <> piece.Color
-                    then
-                        let newList = GameBoard.Pieces |> List.except [GameBoard.Pieces.[q]; piece] |> List.append [Piece(piece.Color, piece.PieceType, square)]
-                        match GameBoard.Turn with
-                        | White -> GameBoard <- Board(newList, Black)
-                        | Black -> GameBoard <- Board(newList, White)
-    if OpenMove = true
-        then
-            let newList = GameBoard.Pieces |> List.except [piece] |> List.append [Piece(piece.Color, piece.PieceType, square)]
-            match GameBoard.Turn with
-            | White -> GameBoard <- Board(newList, Black)
-            | Black -> GameBoard <- Board(newList, White)
+                let capturedPiece = GameBoard.Pieces |> List.find (fun  x -> x.Coord = square)
+                let newList = GameBoard.Pieces |> List.except [capturedPiece; piece] |> List.append [Piece(piece.Color, piece.PieceType, square)]
+                match GameBoard.Turn with
+                | White -> Board(newList, Black)
+                | Black -> Board(newList, White)
+            else
+                let newList = GameBoard.Pieces |> List.except [piece] |> List.append [Piece(piece.Color, piece.PieceType, square)]
+                match GameBoard.Turn with
+                | White -> Board(newList, Black)
+                | Black -> Board(newList, White)
+    )
+    returnBoard
 
-// I've only use the MakeMove function manually so far as a testing feature,
+// I've only used the MakeMove function manually so far as a testing feature,
 // but eventually the piece to be moved and the intended square will be fed into it
 // from somewhere else
+
+// The MakeMove function will be fed different possible moves, and it will be used to create hypothetical board states
+// for analysis by the CalculateMaterialBalance function
+
+// The MakeMove function should also handle switching turns between white and black each move, but I haven't tested
+// that yet
             
 // The CheckFor... series of functions actually handle finding legal moves and captures
 
@@ -707,11 +734,32 @@ let MakeMove (piece:Piece) (square:(int * int)) =
 // In the future, analyzing a move ahead will create a hypothetical board state, which could then be fed in all the
 // different analysis functions
 
-MakeMove GameBoard.Pieces.[12] (5, 4) // Pawn e4
+GameBoard <- MakeMove GameBoard.Pieces.[12] (5, 4) // Pawn e4
 
-MakeMove GameBoard.Pieces.[20] (5, 5) // Pawn e5
+printfn "%A\n" (ComputeFEN GameBoard)
 
-printfn "%A" (ComputeFEN GameBoard)
+GameBoard <- MakeMove GameBoard.Pieces.[19] (4, 5) // Pawn d5
+
+printfn "%A\n" (ComputeFEN GameBoard)
+
+GameBoard <- MakeMove GameBoard.Pieces.[1] (4, 5) // Pawn xd5
+
+// Here you can see the major flaw with using the MakeMove function manually. Before White moved the pawn to e4,
+// it was index 12 in the list of pieces, but after it moved, it became index 1
+
+printfn "%A\n" (ComputeFEN GameBoard)
+
+printfn "Material Balance: %A\n" (CalculateMaterialBalance GameBoard)
+
+GameBoard <- MakeMove GameBoard.Pieces.[26] (4, 5) // Queen xd5
+
+printfn "%A\n" (ComputeFEN GameBoard)
+
+printfn "Material Balance: %A\n" (CalculateMaterialBalance GameBoard)
+
+// This section of Moves is the first 4 moves of the Scandinavian Defence.
+// You can see the material balance favor white by 1 when the pawn is captured in the center, and then the material is
+// back to even when black captures the white pawn with the queen.
 
 
 
