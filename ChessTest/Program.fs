@@ -757,15 +757,3 @@ printfn "Material Balance: %A\n" (CalculateMaterialBalance GameBoard)
 // This section of Moves is the first 4 moves of the Scandinavian Defence.
 // You can see the material balance favor white by 1 when the pawn is captured in the center, and then the material is
 // back to even when black captures the white pawn with the queen.
-
-
-
-
-
-
-
-
-
-   
-            
-    
