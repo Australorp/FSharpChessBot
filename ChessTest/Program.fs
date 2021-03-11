@@ -695,7 +695,7 @@ let GetAllPossibleCaptures (boardState:Board) =
 // GetAllPossibleMoves and GetAllPossibleCaptures return a list of lists with some empty lists included
 // The end goal for these two functions would be to return one list of all possible coordinates or pieces and no empties
 // Also these functions may not be super useful in their current form
-// I'm just keeping them because I just wrote them and they may turn out to be helpful eventually
+// I'm keeping them because I just wrote them and they may turn out to be helpful eventually
 
 
 
@@ -728,11 +728,8 @@ let MakeMove (piece:Piece) (square:(int * int)) =
             
 // The CheckFor... series of functions actually handle finding legal moves and captures
 
-// I made the GameBoard variable mutable and the MakeMove function creates and new board state, and then assigns that to
-// the GameBoard variable
-
-// In the future, analyzing a move ahead will create a hypothetical board state, which could then be fed in all the
-// different analysis functions
+// I made the GameBoard variable mutable and the MakeMove function creates a new board state, which can then
+// be analyzed or assigned to the GameBoard variable
 
 GameBoard <- MakeMove GameBoard.Pieces.[12] (5, 4) // Pawn e4
 
