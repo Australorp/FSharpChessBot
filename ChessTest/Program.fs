@@ -162,25 +162,25 @@ let ReadFEN (x:string) =
 
 let CalculateMaterialBalance (boardState:Board) = 
     let materialBalance = [
-    for p in 0 .. boardState.Pieces.Length - 1 do
-        match boardState.Pieces.[p].Color with
-        | White ->
-            match boardState.Pieces.[p].PieceType with
-            | Rook -> 5
-            | Knight -> 3
-            | Bishop -> 3
-            | Queen -> 9
-            | King -> 0
-            | Pawn -> 1
+        for piece in boardState.Pieces do
+            match piece.Color with
+            | White ->
+                match piece.PieceType with
+                | Rook -> 5
+                | Knight -> 3
+                | Bishop -> 3
+                | Queen -> 9
+                | King -> 0
+                | Pawn -> 1
             
-        | Black ->
-            match boardState.Pieces.[p].PieceType with
-            | Rook -> -5
-            | Knight -> -3
-            | Bishop -> -3
-            | Queen -> -9
-            | King -> 0
-            | Pawn -> -1
+            | Black ->
+                match piece.PieceType with
+                | Rook -> -5
+                | Knight -> -3
+                | Bishop -> -3
+                | Queen -> -9
+                | King -> 0
+                | Pawn -> -1
     ]
     materialBalance |> List.sum
 
