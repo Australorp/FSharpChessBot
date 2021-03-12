@@ -14,6 +14,18 @@ type Side =
     | White
     | Black
 
+type Direction = 
+    | N
+    | S
+    | E
+    | W
+    | NW
+    | NE
+    | SW
+    | SE
+
+type Tile = int * int
+
 type Piece(pieceColor:Side, typeOfPiece: PieceTypes, coord: (int * int)) =
     member _.Color = pieceColor
     member _.PieceType = typeOfPiece
@@ -23,12 +35,25 @@ type Board(pieces:List<Piece>, turn :Side) =
     member _.Pieces = pieces
     member _.Turn = turn
 
+type Move = 
+    | AvailableMove of Tile
+    | AvailableCapture of Piece
+
 
 // End of type declarations
 
 let StartingFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 let FriedLiverFEN = "r1bqk2r/pppp1ppp/2n2n2/2b1p1N1/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 6 5"
 let TestingFEN = "rnb1kbnr/ppp1pppp/8/4q3/8/2N5/PPPPKPPP/R1BQ1BNR w KQkq - 2 4"
+
+let chessTiles = 
+    [|
+        for x in 1..8 do
+            for y in 1..8 do
+                x, y
+    |]
+
+let doesTileExist (x, y) = Array.contains (x, y) chessTiles
 
 let toChessNotation (coord:(int * int)) =
     let move = (
@@ -54,7 +79,43 @@ let isCapturable (attacker: Piece) (piece: Piece) =
     | a, p when a.Color = p.Color -> false
     | _ -> true
 
-let allHorizontalMoves = ()
+let tileInDirection direction (x, y) =
+    let tile = 
+        match direction with
+        | N -> x, y + 1
+        | S -> x, y - 1
+        | E -> x + 1, y
+        | W -> x - 1, y
+        | NE -> x + 1, y + 1
+        | NW -> x - 1, y + 1
+        | SE -> x + 1, y - 1
+        | SW -> x - 1, y - 1
+
+    chessTiles
+    |> Array.tryFind (fun x -> x = tile)
+
+let allDirectionalMoves (allPieces: Piece list) (pieceToMove: Piece) direction =
+    let pieceOnTile tile =
+        allPieces
+        |> List.tryFind (fun x -> x.Coord = tile)
+
+    /// recursively scans directions to return list of allowed moves/captures
+    let rec scanDirection from collectedMoves =
+        match tileInDirection direction from with
+        | None -> collectedMoves
+        | Some tile ->
+            match pieceOnTile tile with
+            | None -> 
+                let move = AvailableMove tile
+                scanDirection tile (move::collectedMoves)
+            | Some piece ->
+                if isCapturable pieceToMove piece then
+                    let capture = AvailableCapture piece
+                    scanDirection tile (capture::collectedMoves)
+                else 
+                    collectedMoves
+    
+    scanDirection pieceToMove.Coord [] // seed the recursive function with an empty starting list
 
 let SquareToCoordinate (input:String) =
     let number = (
