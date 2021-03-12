@@ -30,7 +30,7 @@ let StartingFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 let FriedLiverFEN = "r1bqk2r/pppp1ppp/2n2n2/2b1p1N1/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 6 5"
 let TestingFEN = "rnb1kbnr/ppp1pppp/8/4q3/8/2N5/PPPPKPPP/R1BQ1BNR w KQkq - 2 4"
 
-let CoordinateToSquare (coord:(int * int)) =
+let toChessNotation (coord:(int * int)) =
     let move = (
         match fst coord with
         | 1 -> "a"
@@ -47,6 +47,14 @@ let CoordinateToSquare (coord:(int * int)) =
     )
     move
 // This function would convert (1,1) to a1 or (5,4) to e4
+
+let isCapturable (attacker: Piece) (piece: Piece) = 
+    match attacker, piece with
+    | a, p when p.PieceType = King -> false
+    | a, p when a.Color = p.Color -> false
+    | _ -> true
+
+let allHorizontalMoves = ()
 
 let SquareToCoordinate (input:String) =
     let number = (
@@ -662,11 +670,11 @@ let CheckForPawnCaptures (piece:Piece) =
     Captures
             
 let FormatMove (piece:Piece) (coord:(int * int)) = 
-    let output = (CoordinateToSquare piece.Coord + ">" + CoordinateToSquare coord)
+    let output = (toChessNotation piece.Coord + ">" + toChessNotation coord)
     output
 
 let FormatCapture (movingPiece:Piece) (capturedPiece:Piece) =
-    let output = (CoordinateToSquare movingPiece.Coord + ">" + CoordinateToSquare capturedPiece.Coord)
+    let output = (toChessNotation movingPiece.Coord + ">" + toChessNotation capturedPiece.Coord)
     output
 
 let CheckForAvailableMoves (x:Piece) =
@@ -776,7 +784,7 @@ let IsKingAttacked (board:Board) (forSide:Side) =
     | White ->
         let whiteKing = board.Pieces |> List.filter (fun x -> x.PieceType = King) |> List.find (fun x -> x.Color = White)
         let AllPossibleCaptures:List<String> = GetAllPossibleCaptures board Black |> List.concat
-        if AllPossibleCaptures |> List.map (fun x -> x.Split('>').[1]) |> List.contains (CoordinateToSquare whiteKing.Coord)
+        if AllPossibleCaptures |> List.map (fun x -> x.Split('>').[1]) |> List.contains (toChessNotation whiteKing.Coord)
         then 
             true
             
@@ -786,7 +794,7 @@ let IsKingAttacked (board:Board) (forSide:Side) =
     | Black ->
         let blackKing = board.Pieces |> List.filter (fun x -> x.PieceType = King) |> List.find (fun x -> x.Color = White)
         let AllPossibleCaptures:List<String> = GetAllPossibleCaptures board White |> List.concat
-        if AllPossibleCaptures |> List.map (fun x -> x.Split('>').[1]) |> List.contains (CoordinateToSquare blackKing.Coord)
+        if AllPossibleCaptures |> List.map (fun x -> x.Split('>').[1]) |> List.contains (toChessNotation blackKing.Coord)
         then   
             true
         else 
