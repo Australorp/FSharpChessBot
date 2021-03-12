@@ -28,7 +28,49 @@ type Board(pieces:List<Piece>, turn :Side) =
 
 let StartingFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 let FriedLiverFEN = "r1bqk2r/pppp1ppp/2n2n2/2b1p1N1/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 6 5"
-let TestingFEN = "2b1kQ1r/pp1Nbppp/2n2n2/2q1p1P1/NB1PP3/8/PPP2P1P/RrB1K2R w KQk - 6 5"
+let TestingFEN = "rnb1kbnr/ppp1pppp/8/4q3/8/2N5/PPPPKPPP/R1BQ1BNR w KQkq - 2 4"
+
+let CoordinateToSquare (coord:(int * int)) =
+    let move = (
+        match fst coord with
+        | 1 -> "a"
+        | 2 -> "b"
+        | 3 -> "c"
+        | 4 -> "d"
+        | 5 -> "e"
+        | 6 -> "f"
+        | 7 -> "g"
+        | 8 -> "h"
+        +
+        (snd coord).ToString()
+
+    )
+    move
+// This function would convert (1,1) to a1 or (5,4) to e4
+
+let SquareToCoordinate (input:String) =
+    let number = (
+        match (Seq.toList input).[0] with
+        | 'a' -> 1
+        | 'b' -> 2
+        | 'c' -> 3
+        | 'd' -> 4
+        | 'e' -> 5
+        | 'f' -> 6
+        | 'g' -> 7
+        | 'h' -> 8
+        ,
+        match (Seq.toList input).[1] with
+        | '1' -> 1
+        | '2' -> 2
+        | '3' -> 3
+        | '4' -> 4
+        | '5' -> 5
+        | '6' -> 6
+        | '7' -> 7
+        | '8' -> 8
+    )
+    number
 
 let MatchPiece x (coord:(int * int)) =
     match x with
@@ -142,7 +184,7 @@ let CalculateMaterialBalance (boardState:Board) =
     ]
     materialBalance |> List.sum
 
-let mutable GameBoard = Board((ReadFEN StartingFEN), White)
+let mutable GameBoard = Board((ReadFEN TestingFEN), White)
 
 let CheckForHorizontalMoves (range:int) (piece:Piece) = 
     let OpenSquares : List<(int * int)> = [
@@ -561,7 +603,10 @@ let CheckForPawnMoves (piece:Piece) =
                     if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch + 2)
                         then ()
                         else
-                            (xsearch, ysearch + 2)
+                            if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch + 1)
+                                then ()
+                                else
+                                    (xsearch, ysearch + 2)
             if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch + 1)
                 then ()
                 else
@@ -572,7 +617,10 @@ let CheckForPawnMoves (piece:Piece) =
                     if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch - 2)
                         then ()
                         else
-                            (xsearch, ysearch - 2)
+                            if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch - 1)
+                                then ()
+                                else
+                                    (xsearch, ysearch - 2)
             if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch - 1)
                 then ()
                 else
@@ -613,29 +661,34 @@ let CheckForPawnCaptures (piece:Piece) =
     ]
     Captures
             
+let FormatMove (piece:Piece) (coord:(int * int)) = 
+    let output = (CoordinateToSquare piece.Coord + ">" + CoordinateToSquare coord)
+    output
 
-
+let FormatCapture (movingPiece:Piece) (capturedPiece:Piece) =
+    let output = (CoordinateToSquare movingPiece.Coord + ">" + CoordinateToSquare capturedPiece.Coord)
+    output
 
 let CheckForAvailableMoves (x:Piece) =
     match x.PieceType with
-    | Rook -> CheckForHorizontalMoves 8 x
-    | Knight -> CheckForKnightMoves x
-    | Bishop -> CheckForDiagonalMoves 8 x
-    | Queen -> List.append (CheckForHorizontalMoves 8 x) (CheckForDiagonalMoves 8 x) 
-    | King -> List.append (CheckForHorizontalMoves 2 x) (CheckForDiagonalMoves 2 x)
-    | Pawn -> CheckForPawnMoves x
+    | Rook -> CheckForHorizontalMoves 8 x |> List.map (FormatMove x)
+    | Knight -> CheckForKnightMoves x |> List.map (FormatMove x)
+    | Bishop -> CheckForDiagonalMoves 8 x |> List.map (FormatMove x)
+    | Queen -> List.append (CheckForHorizontalMoves 8 x) (CheckForDiagonalMoves 8 x) |> List.map (FormatMove x)
+    | King -> List.append (CheckForHorizontalMoves 2 x) (CheckForDiagonalMoves 2 x) |> List.map (FormatMove x)
+    | Pawn -> CheckForPawnMoves x |> List.map (FormatMove x)
 
 let CheckForAvailableCaptures (x:Piece) =
     match x.PieceType with
-    | Rook -> CheckForHorizontalCaptures 8 x
-    | Knight -> CheckForKnightCaptures x
-    | Bishop -> CheckForDiagonalCaptures 8 x
-    | Queen -> List.append (CheckForHorizontalCaptures 8 x) (CheckForDiagonalCaptures 8 x)
-    | King -> List.append (CheckForHorizontalCaptures 2 x) (CheckForDiagonalCaptures 2 x)
-    | Pawn -> CheckForPawnCaptures x
+    | Rook -> CheckForHorizontalCaptures 8 x |> List.map (FormatCapture x)
+    | Knight -> CheckForKnightCaptures x |> List.map (FormatCapture x)
+    | Bishop -> CheckForDiagonalCaptures 8 x |> List.map (FormatCapture x)
+    | Queen -> List.append (CheckForHorizontalCaptures 8 x) (CheckForDiagonalCaptures 8 x) |> List.map (FormatCapture x)
+    | King -> List.append (CheckForHorizontalCaptures 2 x) (CheckForDiagonalCaptures 2 x) |> List.map (FormatCapture x)
+    | Pawn -> CheckForPawnCaptures x |> List.map (FormatCapture x)
 
-let GetAllPossibleMoves (boardState:Board) = 
-    match boardState.Turn with
+let GetAllPossibleMoves (boardState:Board) (forSide:Side) = 
+    match forSide with
     | White ->
         let WhitePieces = [
         for i in 0 .. boardState.Pieces.Length - 1 do
@@ -663,8 +716,8 @@ let GetAllPossibleMoves (boardState:Board) =
 
         AllPossibleMoves
 
-let GetAllPossibleCaptures (boardState:Board) = 
-    match boardState.Turn with
+let GetAllPossibleCaptures (boardState:Board) (forSide:Side) = 
+    match forSide with
     | White ->
         let WhitePieces = [
         for i in 0 .. boardState.Pieces.Length - 1 do
@@ -693,67 +746,69 @@ let GetAllPossibleCaptures (boardState:Board) =
         AllPossibleCaptures
 
 // GetAllPossibleMoves and GetAllPossibleCaptures return a list of lists with some empty lists included
-// The end goal for these two functions would be to return one list of all possible coordinates or pieces and no empties
-// Also these functions may not be super useful in their current form
-// I'm keeping them because I just wrote them and they may turn out to be helpful eventually
+// You can pipe them into List.concat to combine all the sublists into one list of values
 
 
 
-let MakeMove (piece:Piece) (square:(int * int)) = 
+let MakeMove (input:String) (board:Board) = 
+    let pieceSquare = input.Split('>').[0] |> SquareToCoordinate
+    let targetSquare = input.Split('>').[1] |> SquareToCoordinate
+
+    let movingPiece = board.Pieces |> List.find (fun  x -> x.Coord = pieceSquare)
     let returnBoard = (
-        if GameBoard.Pieces |> List.map (fun x -> x.Coord) |> List.contains square
+        if board.Pieces |> List.map (fun x -> x.Coord) |> List.contains targetSquare
             then
-                let capturedPiece = GameBoard.Pieces |> List.find (fun  x -> x.Coord = square)
-                let newList = GameBoard.Pieces |> List.except [capturedPiece; piece] |> List.append [Piece(piece.Color, piece.PieceType, square)]
-                match GameBoard.Turn with
+                let capturedPiece = board.Pieces |> List.find (fun  x -> x.Coord = targetSquare)
+                let newList = board.Pieces |> List.except [capturedPiece; movingPiece] |> List.append [Piece(movingPiece.Color, movingPiece.PieceType, targetSquare)]
+                match board.Turn with
                 | White -> Board(newList, Black)
                 | Black -> Board(newList, White)
             else
-                let newList = GameBoard.Pieces |> List.except [piece] |> List.append [Piece(piece.Color, piece.PieceType, square)]
-                match GameBoard.Turn with
+                let newList = board.Pieces |> List.except [movingPiece] |> List.append [Piece(movingPiece.Color, movingPiece.PieceType, targetSquare)]
+                match board.Turn with
                 | White -> Board(newList, Black)
                 | Black -> Board(newList, White)
     )
     returnBoard
 
-// I've only used the MakeMove function manually so far as a testing feature,
-// but eventually the piece to be moved and the intended square will be fed into it
-// from somewhere else
-
-// The MakeMove function will be fed different possible moves, and it will be used to create hypothetical board states
-// for analysis by the CalculateMaterialBalance function
-
-// The MakeMove function should also handle switching turns between white and black each move, but I haven't tested
-// that yet
+let IsKingAttacked (board:Board) (forSide:Side) =
+    match forSide with
+    | White ->
+        let whiteKing = board.Pieces |> List.filter (fun x -> x.PieceType = King) |> List.find (fun x -> x.Color = White)
+        let AllPossibleCaptures:List<String> = GetAllPossibleCaptures board Black |> List.concat
+        if AllPossibleCaptures |> List.map (fun x -> x.Split('>').[1]) |> List.contains (CoordinateToSquare whiteKing.Coord)
+        then 
+            true
             
-// The CheckFor... series of functions actually handle finding legal moves and captures
+        else 
+            false
+            
+    | Black ->
+        let blackKing = board.Pieces |> List.filter (fun x -> x.PieceType = King) |> List.find (fun x -> x.Color = White)
+        let AllPossibleCaptures:List<String> = GetAllPossibleCaptures board White |> List.concat
+        if AllPossibleCaptures |> List.map (fun x -> x.Split('>').[1]) |> List.contains (CoordinateToSquare blackKing.Coord)
+        then   
+            true
+        else 
+            false
 
-// I made the GameBoard variable mutable and the MakeMove function creates a new board state, which can then
-// be analyzed or assigned to the GameBoard variable
+let IsMoveLegal (move:String) (board:Board) =
+    let hypotheticalBoard = MakeMove move board
+    if IsKingAttacked hypotheticalBoard board.Turn = true
+    then false
+    else true
 
-GameBoard <- MakeMove GameBoard.Pieces.[12] (5, 4) // Pawn e4
+let FindAllLegalMoves (board:Board) =
+    let l1 = GetAllPossibleMoves board board.Turn |> List.concat
+    let l2 = GetAllPossibleCaptures board board.Turn |> List.concat
+    let l3 = [l1; l2] |> List.concat
+    let test = l3 |> List.filter (fun x -> (IsMoveLegal x board) = true)
+    test
 
-printfn "%A\n" (ComputeFEN GameBoard)
+//GameBoard <- MakeMove "d2d4" GameBoard
 
-GameBoard <- MakeMove GameBoard.Pieces.[19] (4, 5) // Pawn d5
+printfn "%A" GameBoard.Turn
 
-printfn "%A\n" (ComputeFEN GameBoard)
+printfn "\nKing in check: %A\n" (IsKingAttacked GameBoard GameBoard.Turn)
 
-GameBoard <- MakeMove GameBoard.Pieces.[1] (4, 5) // Pawn xd5
-
-// Here you can see the major flaw with using the MakeMove function manually. Before White moved the pawn to e4,
-// it was index 12 in the list of pieces, but after it moved, it became index 1
-
-printfn "%A\n" (ComputeFEN GameBoard)
-
-printfn "Material Balance: %A\n" (CalculateMaterialBalance GameBoard)
-
-GameBoard <- MakeMove GameBoard.Pieces.[26] (4, 5) // Queen xd5
-
-printfn "%A\n" (ComputeFEN GameBoard)
-
-printfn "Material Balance: %A\n" (CalculateMaterialBalance GameBoard)
-
-// This section of Moves is the first 4 moves of the Scandinavian Defence.
-// You can see the material balance favor white by 1 when the pawn is captured in the center, and then the material is
-// back to even when black captures the white pawn with the queen.
+printfn "Possible Moves: %A" (FindAllLegalMoves GameBoard)
