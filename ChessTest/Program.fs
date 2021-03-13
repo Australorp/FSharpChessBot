@@ -118,6 +118,35 @@ let allDirectionalMoves (allPieces: Piece list) (pieceToMove: Piece) direction =
     
     scanDirection pieceToMove.Coord [] // seed the recursive function with an empty starting list
 
+let allKnightMoves (allPieces: Piece list) (pieceToMove: Piece) =
+    let moves = 
+        [
+            fun (x, y) -> x + 1, y + 2
+            fun (x, y) -> x + 2, y + 1
+            fun (x, y) -> x - 1, y - 2
+            fun (x, y) -> x - 2, y - 1
+            fun (x, y) -> x - 1, y + 2
+            fun (x, y) -> x - 2, y + 1
+            fun (x, y) -> x + 1, y - 2
+            fun (x, y) -> x + 2, y - 1
+        ]
+
+    let pieceOnTile tile =
+        allPieces
+        |> List.tryFind (fun x -> x.Coord = tile)
+
+    let destinations = moves |> List.map (fun move -> move pieceToMove.Coord)
+
+    destinations
+    |> List.choose (fun tile ->
+        match pieceOnTile tile with
+        | Some piece -> 
+            match isCapturable pieceToMove piece with
+            | true -> Some (AvailableCapture piece)
+            | false -> None
+        | None -> None
+        )
+
 let SquareToCoordinate (input:String) =
     let number = (
         match (Seq.toList input).[0] with
