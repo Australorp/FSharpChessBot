@@ -45,7 +45,7 @@ type Move =
 
 let StartingFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 let FriedLiverFEN = "r1bqk2r/pppp1ppp/2n2n2/2b1p1N1/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 6 5"
-let TestingFEN = "rnb1kbnr/1pp1pppp/p7/4q3/8/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 0 1"
+let TestingFEN = "r1b1kbnr/ppp1pppp/2n5/4q3/8/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 0 1"
 
 let chessTiles = 
     [|
@@ -254,7 +254,7 @@ let CalculateMaterialBalance (boardState:Board) =
     ]
     materialBalance |> List.sum
 
-let mutable GameBoard = Board((ReadFEN StartingFEN), White)
+let mutable GameBoard = Board((ReadFEN TestingFEN), White)
 
 let CheckForHorizontalMoves (range:int) (piece:Piece) (board:Board) = 
     let OpenSquares : List<(int * int)> = [
@@ -889,22 +889,31 @@ let rec AnalysisTest (board:Board) (depth:int) (forSide:Side) =
             let mutable BestValue = 0
             for move in FindAllLegalMoves board do
                 let resultingBoard = MakeMove move board
+                let boardEval = CalculateMaterialBalance resultingBoard
 
                 //let text = "Move: " + move + "   Material Balance " + (CalculateMaterialBalance resultingBoard).ToString() + "   FEN Position " + (ComputeFEN resultingBoard) + "             "
                 //File.AppendAllText(file, text)
-                
-                match forSide with
-                | White ->
-                    if CalculateMaterialBalance resultingBoard > BestValue
-                        then BestValue <- CalculateMaterialBalance resultingBoard
-                | Black ->
-                    if CalculateMaterialBalance resultingBoard < BestValue
-                        then BestValue <- CalculateMaterialBalance resultingBoard
-                if depth > 1
-                    then AnalysisTest resultingBoard (depth - 1) forSide |> ignore
-            BestValue
 
-        
+                
+
+                match board.Turn with
+                | White ->
+                    if boardEval > BestValue
+                    then 
+                        BestValue <- boardEval
+                        printfn "Move: %A\n Material Balance: %A\n FEN: %A\n\n\n" move boardEval (ComputeFEN resultingBoard)
+                | Black ->
+                    if boardEval < BestValue
+                    then 
+                        BestValue <- boardEval
+                        printfn "Move: %A\n Material Balance: %A\n FEN: %A\n\n\n" move boardEval (ComputeFEN resultingBoard)
+
+                if depth > 1
+                    then
+                        AnalysisTest resultingBoard (depth - 1) forSide |> ignore
+
+            BestValue
+     
 printfn "Final Result: %A" (AnalysisTest GameBoard 2 White)
 
 
