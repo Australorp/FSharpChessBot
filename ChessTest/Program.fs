@@ -1,6 +1,7 @@
 ﻿// Learn more about F# at http://docs.microsoft.com/dotnet/fsharp
 
 open System
+open System.IO
 
 type PieceTypes =
     | Rook
@@ -44,7 +45,7 @@ type Move =
 
 let StartingFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 let FriedLiverFEN = "r1bqk2r/pppp1ppp/2n2n2/2b1p1N1/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 6 5"
-let TestingFEN = "rnb1kbnr/ppp1pppp/8/4q3/8/2N5/PPPPKPPP/R1BQ1BNR w KQkq - 2 4"
+let TestingFEN = "rnb1kbnr/1pp1pppp/p7/4q3/8/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 0 1"
 
 let chessTiles = 
     [|
@@ -253,9 +254,9 @@ let CalculateMaterialBalance (boardState:Board) =
     ]
     materialBalance |> List.sum
 
-let mutable GameBoard = Board((ReadFEN TestingFEN), White)
+let mutable GameBoard = Board((ReadFEN StartingFEN), White)
 
-let CheckForHorizontalMoves (range:int) (piece:Piece) = 
+let CheckForHorizontalMoves (range:int) (piece:Piece) (board:Board) = 
     let OpenSquares : List<(int * int)> = [
     for it in 0 .. 3 do
         let mutable xsearch = fst piece.Coord
@@ -264,7 +265,7 @@ let CheckForHorizontalMoves (range:int) (piece:Piece) =
         | 0 -> let mutable i = 1
                while (i < range) do
                     ysearch <- ysearch + 1
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then i <- range + 99
                         else
                             if ysearch < 9 
@@ -276,7 +277,7 @@ let CheckForHorizontalMoves (range:int) (piece:Piece) =
         | 1 -> let mutable i = 1
                while (i < range) do
                     xsearch <- xsearch + 1
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then i <- range + 99
                         else
                             if xsearch < 9 
@@ -288,7 +289,7 @@ let CheckForHorizontalMoves (range:int) (piece:Piece) =
         | 2 -> let mutable i = 1
                while (i < range) do
                     ysearch <- ysearch - 1
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then i <- range + 99
                         else
                             if ysearch > 0 
@@ -300,7 +301,7 @@ let CheckForHorizontalMoves (range:int) (piece:Piece) =
         | 3 -> let mutable i = 1
                while (i < range) do
                    xsearch <- xsearch - 1
-                   if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                   if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then i <- range + 99
                         else
                             if xsearch > 0 
@@ -312,7 +313,7 @@ let CheckForHorizontalMoves (range:int) (piece:Piece) =
     ]
     OpenSquares
 
-let CheckForHorizontalCaptures (range:int) (piece:Piece) = 
+let CheckForHorizontalCaptures (range:int) (piece:Piece) (board:Board) = 
     let Captures : List<(Piece)> = [
     for it in 0 .. 3 do
         let mutable xsearch = fst piece.Coord
@@ -323,11 +324,11 @@ let CheckForHorizontalCaptures (range:int) (piece:Piece) =
                     ysearch <- ysearch + 1
                     if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                         then
-                            for q in 0 .. GameBoard.Pieces.Length - 1 do
-                                if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                            for q in 0 .. board.Pieces.Length - 1 do
+                                if board.Pieces.[q].Coord = (xsearch, ysearch)
                                     then 
-                                        if piece.Color <> GameBoard.Pieces.[q].Color
-                                            then GameBoard.Pieces.[q]
+                                        if piece.Color <> board.Pieces.[q].Color
+                                            then board.Pieces.[q]
                                         i <- range + 99
                     i <- i + 1
         | 1 -> let mutable i = 1
@@ -335,11 +336,11 @@ let CheckForHorizontalCaptures (range:int) (piece:Piece) =
                     xsearch <- xsearch + 1
                     if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                     then
-                        for q in 0 .. GameBoard.Pieces.Length - 1 do
-                            if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                        for q in 0 .. board.Pieces.Length - 1 do
+                            if board.Pieces.[q].Coord = (xsearch, ysearch)
                                 then 
-                                    if piece.Color <> GameBoard.Pieces.[q].Color
-                                        then GameBoard.Pieces.[q]
+                                    if piece.Color <> board.Pieces.[q].Color
+                                        then board.Pieces.[q]
                                     i <- range + 99
                     i <- i + 1
         | 2 -> let mutable i = 1
@@ -347,11 +348,11 @@ let CheckForHorizontalCaptures (range:int) (piece:Piece) =
                     ysearch <- ysearch - 1
                     if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                     then
-                        for q in 0 .. GameBoard.Pieces.Length - 1 do
-                            if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                        for q in 0 .. board.Pieces.Length - 1 do
+                            if board.Pieces.[q].Coord = (xsearch, ysearch)
                                 then 
-                                    if piece.Color <> GameBoard.Pieces.[q].Color
-                                        then GameBoard.Pieces.[q]
+                                    if piece.Color <> board.Pieces.[q].Color
+                                        then board.Pieces.[q]
                                     i <- range + 99
                     i <- i + 1
         | 3 -> let mutable i = 1
@@ -359,17 +360,17 @@ let CheckForHorizontalCaptures (range:int) (piece:Piece) =
                     xsearch <- xsearch - 1
                     if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                     then
-                        for q in 0 .. GameBoard.Pieces.Length - 1 do
-                            if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                        for q in 0 .. board.Pieces.Length - 1 do
+                            if board.Pieces.[q].Coord = (xsearch, ysearch)
                                 then 
-                                    if piece.Color <> GameBoard.Pieces.[q].Color
-                                        then GameBoard.Pieces.[q]
+                                    if piece.Color <> board.Pieces.[q].Color
+                                        then board.Pieces.[q]
                                     i <- range + 99
                     i <- i + 1
     ]
     Captures
 
-let CheckForDiagonalMoves (range:int) (piece:Piece) = 
+let CheckForDiagonalMoves (range:int) (piece:Piece) (board:Board) = 
     let OpenSquares : List<(int * int)> = [
     for it in 0 .. 3 do
         let mutable xsearch = fst piece.Coord
@@ -379,7 +380,7 @@ let CheckForDiagonalMoves (range:int) (piece:Piece) =
                 while (i < range) do
                     ysearch <- ysearch + 1
                     xsearch <- xsearch + 1
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then i <- range + 99
                         else
                             if ysearch < 9 && xsearch < 9 
@@ -392,7 +393,7 @@ let CheckForDiagonalMoves (range:int) (piece:Piece) =
                 while (i < range) do
                     ysearch <- ysearch - 1
                     xsearch <- xsearch + 1
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then i <- range + 99
                         else
                             if ysearch > 0 && xsearch < 9 
@@ -405,7 +406,7 @@ let CheckForDiagonalMoves (range:int) (piece:Piece) =
                 while (i < range) do
                     ysearch <- ysearch - 1
                     xsearch <- xsearch - 1
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then i <- range + 99
                         else
                             if ysearch > 0 && xsearch > 0
@@ -418,7 +419,7 @@ let CheckForDiagonalMoves (range:int) (piece:Piece) =
                 while (i < range) do
                     ysearch <- ysearch + 1
                     xsearch <- xsearch - 1
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then i <- range + 99
                         else
                             if ysearch < 9 && xsearch > 0 
@@ -430,7 +431,7 @@ let CheckForDiagonalMoves (range:int) (piece:Piece) =
     ]
     OpenSquares
 
-let CheckForDiagonalCaptures (range:int) (piece:Piece) = 
+let CheckForDiagonalCaptures (range:int) (piece:Piece) (board:Board) = 
     let Captures : List<(Piece)> = [
     for it in 0 .. 3 do
         let mutable xsearch = fst piece.Coord
@@ -442,11 +443,11 @@ let CheckForDiagonalCaptures (range:int) (piece:Piece) =
                     xsearch <- xsearch + 1
                     if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                         then
-                            for q in 0 .. GameBoard.Pieces.Length - 1 do
-                                if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                            for q in 0 .. board.Pieces.Length - 1 do
+                                if board.Pieces.[q].Coord = (xsearch, ysearch)
                                     then 
-                                        if piece.Color <> GameBoard.Pieces.[q].Color
-                                            then GameBoard.Pieces.[q]
+                                        if piece.Color <> board.Pieces.[q].Color
+                                            then board.Pieces.[q]
                                         i <- range + 99
                     i <- i + 1
         | 1 -> let mutable i = 1
@@ -455,11 +456,11 @@ let CheckForDiagonalCaptures (range:int) (piece:Piece) =
                     xsearch <- xsearch + 1
                     if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                     then
-                        for q in 0 .. GameBoard.Pieces.Length - 1 do
-                            if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                        for q in 0 .. board.Pieces.Length - 1 do
+                            if board.Pieces.[q].Coord = (xsearch, ysearch)
                                 then 
-                                    if piece.Color <> GameBoard.Pieces.[q].Color
-                                        then GameBoard.Pieces.[q]
+                                    if piece.Color <> board.Pieces.[q].Color
+                                        then board.Pieces.[q]
                                     i <- range + 99
                     i <- i + 1
         | 2 -> let mutable i = 1
@@ -468,11 +469,11 @@ let CheckForDiagonalCaptures (range:int) (piece:Piece) =
                     xsearch <- xsearch - 1
                     if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                     then
-                        for q in 0 .. GameBoard.Pieces.Length - 1 do
-                            if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                        for q in 0 .. board.Pieces.Length - 1 do
+                            if board.Pieces.[q].Coord = (xsearch, ysearch)
                                 then 
-                                    if piece.Color <> GameBoard.Pieces.[q].Color
-                                        then GameBoard.Pieces.[q]
+                                    if piece.Color <> board.Pieces.[q].Color
+                                        then board.Pieces.[q]
                                     i <- range + 99
                     i <- i + 1
         | 3 -> let mutable i = 1
@@ -481,17 +482,17 @@ let CheckForDiagonalCaptures (range:int) (piece:Piece) =
                     xsearch <- xsearch - 1
                     if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                     then
-                        for q in 0 .. GameBoard.Pieces.Length - 1 do
-                            if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                        for q in 0 .. board.Pieces.Length - 1 do
+                            if board.Pieces.[q].Coord = (xsearch, ysearch)
                                 then 
-                                    if piece.Color <> GameBoard.Pieces.[q].Color
-                                        then GameBoard.Pieces.[q]
+                                    if piece.Color <> board.Pieces.[q].Color
+                                        then board.Pieces.[q]
                                     i <- range + 99
                     i <- i + 1
     ]
     Captures
 
-let CheckForKnightMoves (piece:Piece) = 
+let CheckForKnightMoves (piece:Piece) (board:Board) = 
     let OpenSquares : List<(int * int)> = [
     for i in 0 .. 7 do
         let mutable xsearch = fst piece.Coord
@@ -502,7 +503,7 @@ let CheckForKnightMoves (piece:Piece) =
             xsearch <- xsearch + 1
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then ()
                         else
                             (xsearch, ysearch)
@@ -511,7 +512,7 @@ let CheckForKnightMoves (piece:Piece) =
             xsearch <- xsearch + 2
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then ()
                         else
                             (xsearch, ysearch)
@@ -520,7 +521,7 @@ let CheckForKnightMoves (piece:Piece) =
             xsearch <- xsearch + 2
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then ()
                         else
                             (xsearch, ysearch)
@@ -529,7 +530,7 @@ let CheckForKnightMoves (piece:Piece) =
             xsearch <- xsearch + 1
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then ()
                         else
                             (xsearch, ysearch)
@@ -538,7 +539,7 @@ let CheckForKnightMoves (piece:Piece) =
             xsearch <- xsearch - 1
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then ()
                         else
                             (xsearch, ysearch)
@@ -547,7 +548,7 @@ let CheckForKnightMoves (piece:Piece) =
             xsearch <- xsearch - 2
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then ()
                         else
                             (xsearch, ysearch)
@@ -556,7 +557,7 @@ let CheckForKnightMoves (piece:Piece) =
             xsearch <- xsearch - 2
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then ()
                         else
                             (xsearch, ysearch)
@@ -565,14 +566,14 @@ let CheckForKnightMoves (piece:Piece) =
             xsearch <- xsearch - 1
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch)
                         then ()
                         else
                             (xsearch, ysearch)
     ]
     OpenSquares
 
-let CheckForKnightCaptures (piece:Piece) = 
+let CheckForKnightCaptures (piece:Piece) (board:Board) = 
     let Captures : List<(Piece)> = [
     for i in 0 .. 7 do
         let mutable xsearch = fst piece.Coord
@@ -583,85 +584,85 @@ let CheckForKnightCaptures (piece:Piece) =
             xsearch <- xsearch + 1
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    for q in 0 .. GameBoard.Pieces.Length - 1 do
-                        if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                    for q in 0 .. board.Pieces.Length - 1 do
+                        if board.Pieces.[q].Coord = (xsearch, ysearch)
                             then 
-                                if piece.Color <> GameBoard.Pieces.[q].Color
-                                    then GameBoard.Pieces.[q]
+                                if piece.Color <> board.Pieces.[q].Color
+                                    then board.Pieces.[q]
         | 1 -> // Right and Up
             ysearch <- ysearch + 1
             xsearch <- xsearch + 2
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    for q in 0 .. GameBoard.Pieces.Length - 1 do
-                        if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                    for q in 0 .. board.Pieces.Length - 1 do
+                        if board.Pieces.[q].Coord = (xsearch, ysearch)
                             then 
-                                if piece.Color <> GameBoard.Pieces.[q].Color
-                                    then GameBoard.Pieces.[q]
+                                if piece.Color <> board.Pieces.[q].Color
+                                    then board.Pieces.[q]
         | 2 -> // Right and Down
             ysearch <- ysearch - 1
             xsearch <- xsearch + 2
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    for q in 0 .. GameBoard.Pieces.Length - 1 do
-                        if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                    for q in 0 .. board.Pieces.Length - 1 do
+                        if board.Pieces.[q].Coord = (xsearch, ysearch)
                             then 
-                                if piece.Color <> GameBoard.Pieces.[q].Color
-                                    then GameBoard.Pieces.[q]
+                                if piece.Color <> board.Pieces.[q].Color
+                                    then board.Pieces.[q]
         | 3 -> // Down and Right
             ysearch <- ysearch - 2
             xsearch <- xsearch + 1
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    for q in 0 .. GameBoard.Pieces.Length - 1 do
-                        if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                    for q in 0 .. board.Pieces.Length - 1 do
+                        if board.Pieces.[q].Coord = (xsearch, ysearch)
                             then 
-                                if piece.Color <> GameBoard.Pieces.[q].Color
-                                    then GameBoard.Pieces.[q]
+                                if piece.Color <> board.Pieces.[q].Color
+                                    then board.Pieces.[q]
         | 4 -> // Down and Left
             ysearch <- ysearch - 2
             xsearch <- xsearch - 1
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    for q in 0 .. GameBoard.Pieces.Length - 1 do
-                        if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                    for q in 0 .. board.Pieces.Length - 1 do
+                        if board.Pieces.[q].Coord = (xsearch, ysearch)
                             then 
-                                if piece.Color <> GameBoard.Pieces.[q].Color
-                                    then GameBoard.Pieces.[q]
+                                if piece.Color <> board.Pieces.[q].Color
+                                    then board.Pieces.[q]
         | 5 -> // Left and Down
             ysearch <- ysearch - 1
             xsearch <- xsearch - 2
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    for q in 0 .. GameBoard.Pieces.Length - 1 do
-                        if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                    for q in 0 .. board.Pieces.Length - 1 do
+                        if board.Pieces.[q].Coord = (xsearch, ysearch)
                             then 
-                                if piece.Color <> GameBoard.Pieces.[q].Color
-                                    then GameBoard.Pieces.[q]
+                                if piece.Color <> board.Pieces.[q].Color
+                                    then board.Pieces.[q]
         | 6 -> // Left and Up
             ysearch <- ysearch + 1
             xsearch <- xsearch - 2
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    for q in 0 .. GameBoard.Pieces.Length - 1 do
-                        if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                    for q in 0 .. board.Pieces.Length - 1 do
+                        if board.Pieces.[q].Coord = (xsearch, ysearch)
                             then 
-                                if piece.Color <> GameBoard.Pieces.[q].Color
-                                    then GameBoard.Pieces.[q]
+                                if piece.Color <> board.Pieces.[q].Color
+                                    then board.Pieces.[q]
         | 7 -> // Up and Left
             ysearch <- ysearch + 2
             xsearch <- xsearch - 1
             if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    for q in 0 .. GameBoard.Pieces.Length - 1 do
-                        if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                    for q in 0 .. board.Pieces.Length - 1 do
+                        if board.Pieces.[q].Coord = (xsearch, ysearch)
                             then 
-                                if piece.Color <> GameBoard.Pieces.[q].Color
-                                    then GameBoard.Pieces.[q]
+                                if piece.Color <> board.Pieces.[q].Color
+                                    then board.Pieces.[q]
     ]
     Captures
 
-let CheckForPawnMoves (piece:Piece) = 
+let CheckForPawnMoves (piece:Piece) (board:Board) = 
     let OpenSquares : List<(int * int)> = [
         let mutable xsearch = fst piece.Coord
         let mutable ysearch = snd piece.Coord
@@ -669,35 +670,35 @@ let CheckForPawnMoves (piece:Piece) =
         | White ->   
             if snd piece.Coord = 2
                 then 
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch + 2)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch + 2)
                         then ()
                         else
-                            if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch + 1)
+                            if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch + 1)
                                 then ()
                                 else
                                     (xsearch, ysearch + 2)
-            if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch + 1)
+            if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch + 1)
                 then ()
                 else
                     (xsearch, ysearch + 1)
         | Black ->
             if snd piece.Coord = 7
                 then 
-                    if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch - 2)
+                    if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch - 2)
                         then ()
                         else
-                            if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch - 1)
+                            if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch - 1)
                                 then ()
                                 else
                                     (xsearch, ysearch - 2)
-            if GameBoard.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch - 1)
+            if board.Pieces |> List.map (fun q -> q.Coord) |> List.contains (xsearch, ysearch - 1)
                 then ()
                 else
                     (xsearch, ysearch - 1)
     ]
     OpenSquares
 
-let CheckForPawnCaptures (piece:Piece) = 
+let CheckForPawnCaptures (piece:Piece) (board:Board) = 
     let Captures : List<(Piece)> = [
     for it in 0 .. 1 do
         let mutable xsearch = fst piece.Coord
@@ -710,11 +711,11 @@ let CheckForPawnCaptures (piece:Piece) =
                 xsearch <- xsearch + 1
                 if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                     then
-                        for q in 0 .. GameBoard.Pieces.Length - 1 do
-                            if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                        for q in 0 .. board.Pieces.Length - 1 do
+                            if board.Pieces.[q].Coord = (xsearch, ysearch)
                                 then 
-                                    if piece.Color <> GameBoard.Pieces.[q].Color
-                                        then GameBoard.Pieces.[q]
+                                    if piece.Color <> board.Pieces.[q].Color
+                                        then board.Pieces.[q]
         | 1 ->
                 if piece.Color = Black
                     then ysearch <- ysearch + 1
@@ -722,11 +723,11 @@ let CheckForPawnCaptures (piece:Piece) =
                 xsearch <- xsearch - 1
                 if ysearch > 0 && ysearch < 9 && xsearch > 0 && xsearch < 9
                 then
-                    for q in 0 .. GameBoard.Pieces.Length - 1 do
-                        if GameBoard.Pieces.[q].Coord = (xsearch, ysearch)
+                    for q in 0 .. board.Pieces.Length - 1 do
+                        if board.Pieces.[q].Coord = (xsearch, ysearch)
                             then 
-                                if piece.Color <> GameBoard.Pieces.[q].Color
-                                    then GameBoard.Pieces.[q]
+                                if piece.Color <> board.Pieces.[q].Color
+                                    then board.Pieces.[q]
     ]
     Captures
             
@@ -738,49 +739,49 @@ let FormatCapture (movingPiece:Piece) (capturedPiece:Piece) =
     let output = (toChessNotation movingPiece.Coord + ">" + toChessNotation capturedPiece.Coord)
     output
 
-let CheckForAvailableMoves (x:Piece) =
+let CheckForAvailableMoves (x:Piece) (board:Board) =
     match x.PieceType with
-    | Rook -> CheckForHorizontalMoves 8 x |> List.map (FormatMove x)
-    | Knight -> CheckForKnightMoves x |> List.map (FormatMove x)
-    | Bishop -> CheckForDiagonalMoves 8 x |> List.map (FormatMove x)
-    | Queen -> List.append (CheckForHorizontalMoves 8 x) (CheckForDiagonalMoves 8 x) |> List.map (FormatMove x)
-    | King -> List.append (CheckForHorizontalMoves 2 x) (CheckForDiagonalMoves 2 x) |> List.map (FormatMove x)
-    | Pawn -> CheckForPawnMoves x |> List.map (FormatMove x)
+    | Rook -> CheckForHorizontalMoves 8 x board |> List.map (FormatMove x)
+    | Knight -> CheckForKnightMoves x board |> List.map (FormatMove x)
+    | Bishop -> CheckForDiagonalMoves 8 x board |> List.map (FormatMove x)
+    | Queen -> List.append (CheckForHorizontalMoves 8 x board) (CheckForDiagonalMoves 8 x board) |> List.map (FormatMove x)
+    | King -> List.append (CheckForHorizontalMoves 2 x board) (CheckForDiagonalMoves 2 x board) |> List.map (FormatMove x)
+    | Pawn -> CheckForPawnMoves x board |> List.map (FormatMove x)
 
-let CheckForAvailableCaptures (x:Piece) =
+let CheckForAvailableCaptures (x:Piece) (board:Board) =
     match x.PieceType with
-    | Rook -> CheckForHorizontalCaptures 8 x |> List.map (FormatCapture x)
-    | Knight -> CheckForKnightCaptures x |> List.map (FormatCapture x)
-    | Bishop -> CheckForDiagonalCaptures 8 x |> List.map (FormatCapture x)
-    | Queen -> List.append (CheckForHorizontalCaptures 8 x) (CheckForDiagonalCaptures 8 x) |> List.map (FormatCapture x)
-    | King -> List.append (CheckForHorizontalCaptures 2 x) (CheckForDiagonalCaptures 2 x) |> List.map (FormatCapture x)
-    | Pawn -> CheckForPawnCaptures x |> List.map (FormatCapture x)
+    | Rook -> CheckForHorizontalCaptures 8 x board |> List.map (FormatCapture x)
+    | Knight -> CheckForKnightCaptures x board |> List.map (FormatCapture x)
+    | Bishop -> CheckForDiagonalCaptures 8 x board |> List.map (FormatCapture x)
+    | Queen -> List.append (CheckForHorizontalCaptures 8 x board) (CheckForDiagonalCaptures 8 x board) |> List.map (FormatCapture x)
+    | King -> List.append (CheckForHorizontalCaptures 2 x board) (CheckForDiagonalCaptures 2 x board) |> List.map (FormatCapture x)
+    | Pawn -> CheckForPawnCaptures x board |> List.map (FormatCapture x)
 
 let GetAllPossibleMoves (boardState:Board) (forSide:Side) = 
     match forSide with
     | White ->
         let WhitePieces = [
-        for i in 0 .. boardState.Pieces.Length - 1 do
-            if boardState.Pieces.[i].Color = White
-                then boardState.Pieces.[i]
+            for piece in boardState.Pieces do
+                if piece.Color = White
+                    then piece
         ]
 
         let AllPossibleMoves = [
-        for i in 0 .. WhitePieces.Length - 1 do
-            CheckForAvailableMoves WhitePieces.[i]
+            for piece in WhitePieces do
+                CheckForAvailableMoves piece boardState
         ]
 
         AllPossibleMoves
     | Black ->
         let BlackPieces = [
-            for i in 0 .. boardState.Pieces.Length - 1 do
-                if boardState.Pieces.[i].Color = Black
-                    then boardState.Pieces.[i]
-            ]
+            for piece in boardState.Pieces do
+                if piece.Color = Black
+                    then piece
+        ]
 
         let AllPossibleMoves = [
-        for i in 0 .. BlackPieces.Length - 1 do
-            CheckForAvailableMoves BlackPieces.[i]
+            for piece in BlackPieces do
+                CheckForAvailableMoves piece boardState
         ]
 
         AllPossibleMoves
@@ -789,27 +790,27 @@ let GetAllPossibleCaptures (boardState:Board) (forSide:Side) =
     match forSide with
     | White ->
         let WhitePieces = [
-        for i in 0 .. boardState.Pieces.Length - 1 do
-            if boardState.Pieces.[i].Color = White
-                then boardState.Pieces.[i]
+            for piece in boardState.Pieces do
+                if piece.Color = White
+                    then piece
         ]
 
         let AllPossibleCaptures = [
-        for i in 0 .. WhitePieces.Length - 1 do
-            CheckForAvailableCaptures WhitePieces.[i]
+            for piece in WhitePieces do
+                CheckForAvailableCaptures piece boardState
         ]
 
         AllPossibleCaptures
     | Black ->
         let BlackPieces = [
-            for i in 0 .. boardState.Pieces.Length - 1 do
-                if boardState.Pieces.[i].Color = Black
-                    then boardState.Pieces.[i]
+            for piece in boardState.Pieces do
+                if piece.Color = Black
+                    then piece
             ]
 
         let AllPossibleCaptures = [
-        for i in 0 .. BlackPieces.Length - 1 do
-            CheckForAvailableCaptures BlackPieces.[i]
+            for piece in BlackPieces do
+                CheckForAvailableCaptures piece boardState
         ]
 
         AllPossibleCaptures
@@ -873,11 +874,41 @@ let FindAllLegalMoves (board:Board) =
     let l3 = [l1; l2] |> List.concat
     let test = l3 |> List.filter (fun x -> (IsMoveLegal x board) = true)
     test
+    
+let file = "test.txt"
+
+let rec AnalysisTest (board:Board) (depth:int) (forSide:Side) = 
+    if (FindAllLegalMoves board).IsEmpty
+        then 
+            match forSide with
+            | White ->
+                -99
+            | Black ->
+                99
+        else
+            let mutable BestValue = 0
+            for move in FindAllLegalMoves board do
+                let resultingBoard = MakeMove move board
+
+                //let text = "Move: " + move + "   Material Balance " + (CalculateMaterialBalance resultingBoard).ToString() + "   FEN Position " + (ComputeFEN resultingBoard) + "             "
+                //File.AppendAllText(file, text)
+                
+                match forSide with
+                | White ->
+                    if CalculateMaterialBalance resultingBoard > BestValue
+                        then BestValue <- CalculateMaterialBalance resultingBoard
+                | Black ->
+                    if CalculateMaterialBalance resultingBoard < BestValue
+                        then BestValue <- CalculateMaterialBalance resultingBoard
+                if depth > 1
+                    then AnalysisTest resultingBoard (depth - 1) forSide |> ignore
+            BestValue
+
+        
+printfn "Final Result: %A" (AnalysisTest GameBoard 2 White)
+
+
+
+//printfn "%A" (ComputeFEN GameBoard)
 
 //GameBoard <- MakeMove "d2d4" GameBoard
-
-printfn "%A" GameBoard.Turn
-
-printfn "\nKing in check: %A\n" (IsKingAttacked GameBoard GameBoard.Turn)
-
-printfn "Possible Moves: %A" (FindAllLegalMoves GameBoard)
