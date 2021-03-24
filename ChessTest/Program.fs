@@ -45,7 +45,7 @@ type Move =
 
 let StartingFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 let FriedLiverFEN = "r1bqk2r/pppp1ppp/2n2n2/2b1p1N1/2B1P3/8/PPPP1PPP/RNBQK2R w KQkq - 6 5"
-let TestingFEN = "r1b1kbnr/ppp1pppp/2n5/4q3/8/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 0 1"
+let TestingFEN = "r1b1kbnr/ppp1pppp/2n5/4q3/8/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 4 5"
 
 let chessTiles = 
     [|
@@ -261,29 +261,31 @@ let ReadFEN (x:string) =
 
 let CalculateMaterialBalance (boardState:Board) = 
     let materialBalance = [
-        for piece in boardState.Pieces do
-            match piece.Color with
-            | White ->
-                match piece.PieceType with
-                | Rook -> 5
-                | Knight -> 3
-                | Bishop -> 3
-                | Queen -> 9
-                | King -> 0
-                | Pawn -> 1
+        boardState.Pieces
+        |> List.map (fun piece -> 
+        match piece.Color with
+        | White ->
+            match piece.PieceType with
+            | Rook -> 5
+            | Knight -> 3
+            | Bishop -> 3
+            | Queen -> 9
+            | King -> 0
+            | Pawn -> 1
             
-            | Black ->
-                match piece.PieceType with
-                | Rook -> -5
-                | Knight -> -3
-                | Bishop -> -3
-                | Queen -> -9
-                | King -> 0
-                | Pawn -> -1
+        | Black ->
+            match piece.PieceType with
+            | Rook -> -5
+            | Knight -> -3
+            | Bishop -> -3
+            | Queen -> -9
+            | King -> 0
+            | Pawn -> -1
+            )
     ]
-    materialBalance |> List.sum
+    materialBalance |> List.concat |> List.sum
 
-let mutable GameBoard = Board((ReadFEN TestingFEN), White)
+let mutable GameBoard = Board((ReadFEN FriedLiverFEN), White)
 
 let CheckForHorizontalMoves (range:int) (piece:Piece) (board:Board) = 
     let OpenSquares : List<(int * int)> = [
@@ -789,58 +791,50 @@ let CheckForAvailableCaptures (x:Piece) (board:Board) =
 let GetAllPossibleMoves (boardState:Board) (forSide:Side) = 
     match forSide with
     | White ->
-        let WhitePieces = [
-            for piece in boardState.Pieces do
-                if piece.Color = White
-                    then piece
-        ]
+        let WhitePieces =
+            boardState.Pieces
+            |> List.filter (fun piece -> piece.Color = White)
 
-        let AllPossibleMoves = [
-            for piece in WhitePieces do
-                CheckForAvailableMoves piece boardState
-        ]
+        let AllPossibleMoves = 
+            WhitePieces
+            |> Seq.mapParallel 8 (fun piece -> CheckForAvailableMoves piece boardState)
+            |> List.ofArray
 
         AllPossibleMoves
     | Black ->
-        let BlackPieces = [
-            for piece in boardState.Pieces do
-                if piece.Color = Black
-                    then piece
-        ]
+        let BlackPieces =
+            boardState.Pieces
+            |> List.filter (fun piece -> piece.Color = Black)
 
-        let AllPossibleMoves = [
-            for piece in BlackPieces do
-                CheckForAvailableMoves piece boardState
-        ]
+        let AllPossibleMoves = 
+            BlackPieces
+            |> Seq.mapParallel 8 (fun piece -> CheckForAvailableMoves piece boardState)
+            |> List.ofArray
 
         AllPossibleMoves
 
 let GetAllPossibleCaptures (boardState:Board) (forSide:Side) = 
     match forSide with
     | White ->
-        let WhitePieces = [
-            for piece in boardState.Pieces do
-                if piece.Color = White
-                    then piece
-        ]
+        let WhitePieces =
+            boardState.Pieces
+            |> List.filter (fun piece -> piece.Color = White)
 
-        let AllPossibleCaptures = [
-            for piece in WhitePieces do
-                CheckForAvailableCaptures piece boardState
-        ]
+        let AllPossibleCaptures = 
+            WhitePieces
+            |> Seq.mapParallel 8 (fun piece -> CheckForAvailableCaptures piece boardState)
+            |> List.ofArray
 
         AllPossibleCaptures
     | Black ->
-        let BlackPieces = [
-            for piece in boardState.Pieces do
-                if piece.Color = Black
-                    then piece
-            ]
+        let BlackPieces =
+            boardState.Pieces
+            |> List.filter (fun piece -> piece.Color = Black)
 
-        let AllPossibleCaptures = [
-            for piece in BlackPieces do
-                CheckForAvailableCaptures piece boardState
-        ]
+        let AllPossibleCaptures = 
+            BlackPieces
+            |> Seq.mapParallel 8 (fun piece -> CheckForAvailableCaptures piece boardState)
+            |> List.ofArray
 
         AllPossibleCaptures
 
@@ -883,7 +877,7 @@ let IsKingAttacked (board:Board) (forSide:Side) =
             false
             
     | Black ->
-        let blackKing = board.Pieces |> List.filter (fun x -> x.PieceType = King) |> List.find (fun x -> x.Color = White)
+        let blackKing = board.Pieces |> List.filter (fun x -> x.PieceType = King) |> List.find (fun x -> x.Color = Black)
         let AllPossibleCaptures:List<String> = GetAllPossibleCaptures board White |> List.concat
         if AllPossibleCaptures |> List.map (fun x -> x.Split('>').[1]) |> List.contains (toChessNotation blackKing.Coord)
         then   
@@ -901,10 +895,118 @@ let FindAllLegalMoves (board:Board) =
     let l1 = GetAllPossibleMoves board board.Turn |> List.concat
     let l2 = GetAllPossibleCaptures board board.Turn |> List.concat
     let l3 = [l1; l2] |> List.concat
-    let test = l3 |> List.filter (fun x -> (IsMoveLegal x board) = true)
-    test
+    let output = l3 |> List.filter (fun x -> (IsMoveLegal x board) = true)
+    output
+
+let FindAllLegalCaptures (board:Board) =
+    let l1 = GetAllPossibleCaptures board board.Turn |> List.concat
+    let output = l1 |> List.filter (fun x -> (IsMoveLegal x board) = true)
+    output
+
+
+let rec alphaBetaMax alpha beta depthLeft board (moves:List<String>) = 
+    if depthLeft = 0
+        then
+            (CalculateMaterialBalance board), moves
+        else
+            let allMoves = FindAllLegalMoves board 
+            let mutable output:int = alpha
+            let mutable moveList = []
+            for move in allMoves do
+                let score = alphaBetaMin alpha beta (depthLeft - 1) (MakeMove move board) (move::moves)
+                if fst score >= beta
+                    then 
+                        output <- beta
+                        moveList <- moves
+                if fst score > alpha
+                    then 
+                        output <- fst score
+                        moveList <- snd score |> List.rev
+            output, moveList
+and alphaBetaMin alpha beta depthLeft board (moves:List<String>) = 
+    if depthLeft = 0
+        then
+            (CalculateMaterialBalance board), moves
+        else
+            let allMoves = FindAllLegalMoves board 
+            let mutable output:int = beta
+            let mutable moveList = moves
+            for move in allMoves do
+                printfn "%A" (move::moves)
+                let score = alphaBetaMax alpha beta (depthLeft - 1) (MakeMove move board) (move::moves)
+                if fst score <= alpha
+                    then 
+                        output <- alpha
+                        moveList <- moves
+                if fst score < beta
+                    then 
+                        output <- fst score
+                        moveList <- snd score |> List.rev
+            output, moveList
+
+
+let analyzeBoard board depth =
     
-let file = "test.txt"
+    let rec bestMove depth moves (board:Board) =
+
+        let valueForSide eval =
+            match board.Turn with
+            | Black -> eval * -1
+            | White -> eval
+        
+        (*
+        let allCaptures = FindAllLegalCaptures board
+
+        let allMoves = (
+            if allCaptures.IsEmpty
+                then 
+                    FindAllLegalMoves board
+                else 
+                    allCaptures
+            )
+        *)
+
+        let allMoves = FindAllLegalMoves board
+
+        if Seq.isEmpty allMoves then
+            0, []
+        else
+            let initialMoves =
+                allMoves
+                |> Seq.mapParallel 8 (fun move -> move, MakeMove move board)
+                |> Seq.toArray
+                |> Seq.mapParallel 8 (fun (move, board) -> move, board, (CalculateMaterialBalance board))
+                |> Seq.toArray
+                |> Seq.sortByDescending (fun (move, board, eval) -> valueForSide eval)
+
+            let bestMoves =
+                match depth with
+                | 0 | 1 -> 
+                    initialMoves
+                    |> Seq.map (fun (move, board, eval) -> move, board, eval, (move::moves))
+                    |> Array.ofSeq
+                    //|> Seq.map (fun (move, board, eval) -> eval)
+                | depth -> 
+                    initialMoves
+                    |> Seq.map (fun (move, board, eval) -> 
+                        let eval, moves = bestMove (depth - 1) (move::moves) board
+                        move, board, eval, moves)
+                    //|> Seq.map (fun (move, board, eval) -> async { return move, board, bestMove (depth - 1) board })
+                    |> Array.ofSeq
+                    //|> Async.runParallelSize 3
+                    //|> Async.RunSynchronously
+                    |> Array.sortByDescending (fun (move, board, eval, moves) -> valueForSide eval)
+
+            let firstMove, board, eval, moves = Seq.head bestMoves
+            
+            //printfn "Move: %A\n FEN: %A\n Eval: %A\n" firstMove (ComputeFEN board) eval
+
+            //let test = bestMoves |> Seq.iter (fun (move, board, eval) -> printfn "Move: %A\n Board: %A\nEval: %A\nDepth: %A\n" move (ComputeFEN board) eval depth)
+
+            eval, moves
+
+    let eval, moves = bestMove board [] depth
+    eval, List.rev moves
 
 let rec AnalysisTest (board:Board) (depth:int) (forSide:Side) = 
     if (FindAllLegalMoves board).IsEmpty
@@ -930,23 +1032,22 @@ let rec AnalysisTest (board:Board) (depth:int) (forSide:Side) =
                     if boardEval > BestValue
                     then 
                         BestValue <- boardEval
-                        printfn "Move: %A\n Material Balance: %A\n FEN: %A\n\n\n" move boardEval (ComputeFEN resultingBoard)
+                        //printfn "Move: %A\n Material Balance: %A\n FEN: %A\n\n\n" move boardEval (ComputeFEN resultingBoard)
                 | Black ->
                     if boardEval < BestValue
                     then 
                         BestValue <- boardEval
-                        printfn "Move: %A\n Material Balance: %A\n FEN: %A\n\n\n" move boardEval (ComputeFEN resultingBoard)
+                        //printfn "Move: %A\n Material Balance: %A\n FEN: %A\n\n\n" move boardEval (ComputeFEN resultingBoard)
 
                 if depth > 1
                     then
                         AnalysisTest resultingBoard (depth - 1) forSide |> ignore
 
+            
             BestValue
-     
-printfn "Final Result: %A" (AnalysisTest GameBoard 2 White)
 
+printfn "%A" (alphaBetaMax -99 99 3 GameBoard [])
 
+//printfn "Final Result: %A" (analyzeBoard 4 GameBoard)
 
-//printfn "%A" (ComputeFEN GameBoard)
-
-//GameBoard <- MakeMove "d2d4" GameBoard
+//printfn "Legal moves for Black: %A" (FindAllLegalMoves GameBoard)
